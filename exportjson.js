@@ -18,8 +18,6 @@ var DEFAULT_STRUCTURE = STRUCTURE_LIST;
 
 
 function onOpen() {
-  
-  
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var menuEntries = [
     {name: "Export JSON for this sheet", functionName: "exportSheet"},
