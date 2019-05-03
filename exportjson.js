@@ -18,34 +18,16 @@ var DEFAULT_STRUCTURE = STRUCTURE_LIST;
 
 
 function onOpen() {
+  
+  
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var menuEntries = [
     {name: "Export JSON for this sheet", functionName: "exportSheet"},
-    {name: "Export JSON for all sheets", functionName: "exportAllSheets"},
-    {name: "Configure export", functionName: "exportOptions"},
+    {name: "Export JSON for all sheets", functionName: "exportAllSheets"}
   ];
   ss.addMenu("Export JSON", menuEntries);
 }
-    
-    
-function exportOptions() {
-  var doc = SpreadsheetApp.getActiveSpreadsheet();
-  var app = UiApp.createApplication().setTitle('Export JSON');
-  
-  var grid = app.createGrid(4, 2);
-  grid.setWidget(0, 0, makeLabel(app, 'Language:'));
-  grid.setWidget(0, 1, makeListBox(app, 'language', [LANGUAGE_JS, LANGUAGE_PYTHON]));
-  grid.setWidget(1, 0, makeLabel(app, 'Format:'));
-  grid.setWidget(1, 1, makeListBox(app, 'format', [FORMAT_PRETTY, FORMAT_MULTILINE, FORMAT_ONELINE]));
-  grid.setWidget(2, 0, makeLabel(app, 'Structure:'));
-  grid.setWidget(2, 1, makeListBox(app, 'structure', [STRUCTURE_LIST, STRUCTURE_HASH]));
-  grid.setWidget(3, 0, makeButton(app, grid, 'Export Active Sheet', 'exportSheet'));
-  grid.setWidget(3, 1, makeButton(app, grid, 'Export All Sheets', 'exportAllSheets'));
-  app.add(grid);
-  
-  doc.show(app);
-}
-
+ 
 function makeLabel(app, text, id) {
   var lb = app.createLabel(text);
   if (id) lb.setId(id);
@@ -93,7 +75,7 @@ function exportAllSheets(e) {
     sheetsData[sheetName] = rowsData;
   }
   var json = makeJSON_(sheetsData, getExportOptions(e));
-  return displayText_(json);
+  displayText_(json);
 }
 
 function exportSheet(e) {
@@ -101,7 +83,7 @@ function exportSheet(e) {
   var sheet = ss.getActiveSheet();
   var rowsData = getRowsData_(sheet, getExportOptions(e));
   var json = makeJSON_(rowsData, getExportOptions(e));
-  return displayText_(json);
+  displayText_(json);
 }
   
 function getExportOptions(e) {
@@ -139,12 +121,11 @@ function makeJSON_(object, options) {
 }
 
 function displayText_(text) {
-  var app = UiApp.createApplication().setTitle('Exported JSON');
-  app.add(makeTextBox(app, 'json'));
-  app.getElementById('json').setText(text);
-  var ss = SpreadsheetApp.getActiveSpreadsheet(); 
-  ss.show(app);
-  return app; 
+  var output = HtmlService.createHtmlOutput("<textarea style='width:100%;' rows='20'>" + text + "</textarea>");
+  output.setWidth(400)
+  output.setHeight(300);
+  SpreadsheetApp.getUi()
+      .showModalDialog(output, 'Exported JSON');
 }
 
 // getRowsData iterates row by row in the input range and returns an array of objects.
