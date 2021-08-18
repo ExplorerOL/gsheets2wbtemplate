@@ -223,9 +223,9 @@ function normalizeHeader_(header) {
       upperCase = true;
       continue;
     }
-    if (!isAlnum_(letter)) {
-      continue;
-    }
+    //if (!isAlnum_(letter)) {
+    //  continue;
+    //}
     if (key.length == 0 && isDigit_(letter)) {
       continue; // first character must be a letter
     }
