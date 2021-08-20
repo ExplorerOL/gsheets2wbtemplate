@@ -18,6 +18,7 @@ var DEFAULT_STRUCTURE = STRUCTURE_LIST;
 
 
 function onOpen() {
+  //creating new menu
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var menuEntries = [
     {name: "Export JSON for this sheet", functionName: "exportSheet"},
@@ -26,59 +27,108 @@ function onOpen() {
   ss.addMenu("Export JSON", menuEntries);
 }
  
-function makeLabel(app, text, id) {
-  var lb = app.createLabel(text);
-  if (id) lb.setId(id);
-  return lb;
-}
+// function makeLabel(app, text, id) {
+//   var lb = app.createLabel(text);
+//   if (id) lb.setId(id);
+//   return lb;
+// }
 
-function makeListBox(app, name, items) {
-  var listBox = app.createListBox().setId(name).setName(name);
-  listBox.setVisibleItemCount(1);
+
+// function makeListBox(app, name, items) {
+//   var listBox = app.createListBox().setId(name).setName(name);
+//   listBox.setVisibleItemCount(1);
   
-  var cache = CacheService.getPublicCache();
-  var selectedValue = cache.get(name);
-  Logger.log(selectedValue);
-  for (var i = 0; i < items.length; i++) {
-    listBox.addItem(items[i]);
-    if (items[1] == selectedValue) {
-      listBox.setSelectedIndex(i);
-    }
-  }
-  return listBox;
-}
+//   var cache = CacheService.getPublicCache();
+//   var selectedValue = cache.get(name);
+//   Logger.log(selectedValue);
+//   for (var i = 0; i < items.length; i++) {
+//     listBox.addItem(items[i]);
+//     if (items[1] == selectedValue) {
+//       listBox.setSelectedIndex(i);
+//     }
+//   }
+//   return listBox;
+// }
 
-function makeButton(app, parent, name, callback) {
-  var button = app.createButton(name);
-  app.add(button);
-  var handler = app.createServerClickHandler(callback).addCallbackElement(parent);;
-  button.addClickHandler(handler);
-  return button;
-}
+// function makeButton(app, parent, name, callback) {
+//   var button = app.createButton(name);
+//   app.add(button);
+//   var handler = app.createServerClickHandler(callback).addCallbackElement(parent);;
+//   button.addClickHandler(handler);
+//   return button;
+// }
 
+//For JSON output??
 function makeTextBox(app, name) { 
   var textArea    = app.createTextArea().setWidth('100%').setHeight('200px').setId(name).setName(name);
   return textArea;
 }
 
 function exportAllSheets(e) {
-  
+  console.log("exportAllSheets");
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheets = ss.getSheets();
+  var sheets = ss.getSheets();  //Sheet[] — An array of all the sheets in the spreadsheet.
+
   var sheetsData = {};
+  var convertOptions = getExportOptions(e);
+
   for (var i = 0; i < sheets.length; i++) {
     var sheet = sheets[i];
-    var rowsData = getRowsData_(sheet, getExportOptions(e));
+
+     // Logger.log(sheet.getSheetName()); //Print sheet name to Log
+    
+    console.log ("sheet name = " + sheet.getSheetName());
+    
+    if (sheet.getSheetName() == "parameters") 
+        convertOptions.structure = STRUCTURE_HASH;
+      else 
+        convertOptions.structure = STRUCTURE_LIST;
+
+    console.log ("otions = " + convertOptions.structure);
+
+
+
+    var rowsData = getRowsData_(sheet, convertOptions);
     var sheetName = sheet.getName(); 
     sheetsData[sheetName] = rowsData;
+
+
+    // console.log('Sheet name = ' + sheetName);
+    // console.log(rowsData);
+   
+
+
+
   }
+    // console.log("sheetsData");
+    // console.log(sheetsData["parameters"]);
+    // //delete json[0];
+
+
   var json = makeJSON_(sheetsData, getExportOptions(e));
+
+    //console.log('JSON elements');
+    //delete json[0];
+    //console.log(json[0]);
+    
+  // let str = "I love JavaScript";
+  // let result = str.replace("I", "Oi");
+  //console.log(result);
+
+
+
   displayText_(json);
+
+
 }
 
 function exportSheet(e) {
+  
+
+
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getActiveSheet();
+
   var rowsData = getRowsData_(sheet, getExportOptions(e));
   var json = makeJSON_(rowsData, getExportOptions(e));
   displayText_(json);
@@ -115,13 +165,15 @@ function makeJSON_(object, options) {
     // add unicode markers
     jsonString = jsonString.replace(/"([a-zA-Z]*)":\s+"/gi, '"$1": u"');
   }
+  console.log("JSON string", jsonString);
   return jsonString;
 }
 
+//View result in JSON
 function displayText_(text) {
   var output = HtmlService.createHtmlOutput("<textarea style='width:100%;' rows='20'>" + text + "</textarea>");
   output.setWidth(400)
-  output.setHeight(300);
+  output.setHeight(500);
   SpreadsheetApp.getUi()
       .showModalDialog(output, 'Exported JSON');
 }
@@ -135,14 +187,32 @@ function displayText_(text) {
 //       This argument is optional and it defaults to the row immediately above range; 
 // Returns an Array of objects.
 function getRowsData_(sheet, options) {
+
+
+
+
   var headersRange = sheet.getRange(1, 1, sheet.getFrozenRows(), sheet.getMaxColumns());
+
+
+
   var headers = headersRange.getValues()[0];
-  var dataRange = sheet.getRange(sheet.getFrozenRows()+1, 1, sheet.getMaxRows(), sheet.getMaxColumns());
+
+  console.log("headers =");
+  console.log(headers);
+
+ var dataRange = sheet.getRange(sheet.getFrozenRows()+1, 1, sheet.getMaxRows(), sheet.getMaxColumns());
+
+
+
   var objects = getObjects_(dataRange.getValues(), normalizeHeaders_(headers));
   if (options.structure == STRUCTURE_HASH) {
     var objectsById = {};
     objects.forEach(function(object) {
       objectsById[object.id] = object;
+      delete objectsById[object.id].id;
+      // console.log ("ObjectByID = " + objectsById[object.id]);
+      // console.log (objectsById[object.id]);
+
     });
     return objectsById;
   } else {
@@ -215,7 +285,7 @@ function normalizeHeaders_(headers) {
 //   "Market Cap (millions) -> "marketCapMillions
 //   "1 number at the beginning is ignored" -> "numberAtTheBeginningIsIgnored"
 function normalizeHeader_(header) {
-  var key = "";
+  var key = "";   //key - key field of JSON
   var upperCase = false;
   for (var i = 0; i < header.length; ++i) {
     var letter = header[i];
@@ -223,9 +293,11 @@ function normalizeHeader_(header) {
       upperCase = true;
       continue;
     }
-    //if (!isAlnum_(letter)) {
-    //  continue;
-    //}
+
+    //Allowed symbols are letters, numbers, _
+    if ( (!isAlnum_(letter)) && (letter != "_") ) {
+      continue;
+    }
     if (key.length == 0 && isDigit_(letter)) {
       continue; // first character must be a letter
     }
