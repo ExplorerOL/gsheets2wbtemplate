@@ -72,41 +72,74 @@ function exportAllSheets(e) {
   var sheetsData = {};
   var convertOptions = getExportOptions(e);
 
-  for (var i = 0; i < sheets.length; i++) {
+  for (var i = 1; i < sheets.length; i++) {
     var sheet = sheets[i];
 
      // Logger.log(sheet.getSheetName()); //Print sheet name to Log
     
-    console.log ("sheet name = " + sheet.getSheetName());
+  //  console.log ("sheet name = " + sheet.getSheetName());
     
     if (sheet.getSheetName() == "parameters") 
         convertOptions.structure = STRUCTURE_HASH;
       else 
         convertOptions.structure = STRUCTURE_LIST;
 
-    console.log ("otions = " + convertOptions.structure);
+  //  console.log ("otions = " + convertOptions.structure);
 
 
 
     var rowsData = getRowsData_(sheet, convertOptions);
     var sheetName = sheet.getName(); 
     sheetsData[sheetName] = rowsData;
-
-
     // console.log('Sheet name = ' + sheetName);
     // console.log(rowsData);
-   
-
-
-
   }
-    // console.log("sheetsData");
+
+    convertOptions.structure = STRUCTURE_LIST;
+    var sheetMainData = getRowsData_(sheets[0], convertOptions);
+
+    //sheetMainData = "123" + sheetMainData;
+    //console.log(sheetMainData[0]);
+    //console.log(typeof (sheetMainData[0]));
+  
+  //  sheetMainData.push(sheetsData); 
+
+  //  sheetsData["groups"] = sheetsData["groups"] + sheetMainData[0];
+
+    // console.log(sheetsData["groups"]);
     // console.log(sheetsData["parameters"]);
     // //delete json[0];
 
 
-  var json = makeJSON_(sheetsData, getExportOptions(e));
+  var templateBody = makeJSON_(sheetsData, getExportOptions(e));
+  var templateRawHead = makeJSON_(sheetMainData, getExportOptions(e));
 
+
+  console.log(templateRawHead);
+  var templateHeadTmp1 = templateRawHead.replace("\[", "");
+  var templateHeadTmp2 = templateHeadTmp1.replace("\"X\"\,", "{");
+  var templateHeadTmp3 = templateHeadTmp2.replace("    }", "");
+  var templateHeadTmp4 = templateHeadTmp3.replace("\n\n\]", "");
+  var templateHeadTmp5 = templateHeadTmp4 + ",";
+  
+  console.log(templateHeadTmp5);
+  // var templateHead2 = templateHead.replace("}", "");
+  // //templateHead2 += ",";
+  //   console.log(templateHead2);
+  // templateHead += "123";
+  // //templateHead[0] = "[";
+
+  // var replacement = '[';
+  // const testString = '12234345556';
+  // console.log(testString);
+  // newString = testString.replace('2', '!!!');
+  // console.log(newString);
+  // const p = 'The quick brown fox jumps over the lazy dog. If the dog reacted, was it really lazy?';
+
+  // console.log(p.replace('dog', 'monkey'));
+
+
+  //  var json = makeJSON_(sheetMainData, getExportOptions(e));
     //console.log('JSON elements');
     //delete json[0];
     //console.log(json[0]);
@@ -115,9 +148,12 @@ function exportAllSheets(e) {
   // let result = str.replace("I", "Oi");
   //console.log(result);
 
+  var templateHeadTmp6  = templateHeadTmp5 + templateBody;
+  var deviceTemplate = templateHeadTmp6.replace(",{", ",\n");
+  deviceTemplate += "\n}";
 
-
-  displayText_(json);
+  console.log(deviceTemplate);
+  displayText_(deviceTemplate);
 
 
 }
@@ -197,8 +233,8 @@ function getRowsData_(sheet, options) {
 
   var headers = headersRange.getValues()[0];
 
-  console.log("headers =");
-  console.log(headers);
+  // console.log("headers =");
+  // console.log(headers);
 
  var dataRange = sheet.getRange(sheet.getFrozenRows()+1, 1, sheet.getMaxRows(), sheet.getMaxColumns());
 
@@ -210,10 +246,10 @@ function getRowsData_(sheet, options) {
     objects.forEach(function(object) {
       objectsById[object.id] = object;
       delete objectsById[object.id].id;
-      // console.log ("ObjectByID = " + objectsById[object.id]);
-      // console.log (objectsById[object.id]);
-
     });
+
+
+
     return objectsById;
   } else {
     return objects;
