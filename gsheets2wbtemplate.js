@@ -21,7 +21,7 @@ function onOpen() {
   //creating new menu
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var menuEntries = [
-    {name: "Export JSON for this sheet", functionName: "exportSheet"},
+  //  {name: "Export JSON for this sheet", functionName: "exportSheet"},
     {name: "Export JSON for all sheets", functionName: "exportAllSheets"}
   ];
   ss.addMenu("Export JSON", menuEntries);
@@ -79,8 +79,11 @@ function exportAllSheets(e) {
     
   //  console.log ("sheet name = " + sheet.getSheetName());
     
-    if (sheet.getSheetName() == "parameters") 
+    if (sheet.getSheetName() == "parameters") {
         convertOptions.structure = STRUCTURE_HASH;
+        //correctParId (sheet);
+        //getColumnsData_(sheet, sheet.getRange(sheet.getFrozenRows()+1, 2, sheet.getMaxRows(), sheet.getMaxColumns()), 1);
+    }
       else 
         convertOptions.structure = STRUCTURE_LIST;
 
@@ -88,11 +91,19 @@ function exportAllSheets(e) {
 
 
 
+
+
     var rowsData = getRowsData_(sheet, convertOptions);
+    //console.log(typeof(rowsData));
     var sheetName = sheet.getName(); 
+
+    //если нет заполненных строк кроме заголовка, то секцию не добаляем в шаблон
+    console.log (Object.keys(rowsData).length);
+    if (Object.keys(rowsData).length == 0) continue;
+
     sheetsData[sheetName] = rowsData;
     // console.log('Sheet name = ' + sheetName);
-    // console.log(rowsData);
+   
   }
 
     convertOptions.structure = STRUCTURE_LIST;
@@ -110,19 +121,22 @@ function exportAllSheets(e) {
     // console.log(sheetsData["parameters"]);
     // //delete json[0];
 
-
+  console.log(sheetsData);
   var templateBody = makeJSON_(sheetsData, getExportOptions(e));
-  var templateRawHead = makeJSON_(sheetMainData, getExportOptions(e));
+  var templateHead = makeJSON_(sheetMainData, getExportOptions(e));
 
 
-  console.log(templateRawHead);
-  var templateHeadTmp1 = templateRawHead.replace("\[", "");
-  var templateHeadTmp2 = templateHeadTmp1.replace("\"X\"\,", "{");
-  var templateHeadTmp3 = templateHeadTmp2.replace("    }", "");
-  var templateHeadTmp4 = templateHeadTmp3.replace("\n\n\]", "");
-  var templateHeadTmp5 = templateHeadTmp4 + ",";
-  
-  console.log(templateHeadTmp5);
+  //console.log(templateRawHead);
+  templateHead = templateHead.replace("\[", "");
+  templateHead = templateHead.replace("\"###\"\,", "{");
+  templateHead = templateHead.replace("    }", "");
+  templateHead = templateHead.replace("\n\n\]", "");
+  templateHead += ",";
+//  templateHead += "\n";
+//  console.log(templateHead);
+
+
+
   // var templateHead2 = templateHead.replace("}", "");
   // //templateHead2 += ",";
   //   console.log(templateHead2);
@@ -147,13 +161,55 @@ function exportAllSheets(e) {
   // let str = "I love JavaScript";
   // let result = str.replace("I", "Oi");
   //console.log(result);
-
-  var templateHeadTmp6  = templateHeadTmp5 + templateBody;
-  var deviceTemplate = templateHeadTmp6.replace(",{", ",\n");
+  
+  //combain hader and bodyoftemplate
+  var deviceTemplate  = templateHead + templateBody;
+  deviceTemplate = deviceTemplate.replace(",{", ",\n\n");
+  //adding last }
   deviceTemplate += "\n}";
 
-  console.log(deviceTemplate);
-  displayText_(deviceTemplate);
+   
+ //"[ replacewith [; ]"replace with ]
+  deviceTemplate =  deviceTemplate.replace(/\"\[/g, "\[");
+  deviceTemplate =  deviceTemplate.replace(/\]\"/g, "\]");
+
+ //In parameters enum_titles replace \" to "
+  deviceTemplate =  deviceTemplate.replace(/\\\"/g, "\"");
+
+  //"true" -> true
+  deviceTemplate =  deviceTemplate.replace(/\"true\"/g, "true");
+  //"false" -> false
+  deviceTemplate =  deviceTemplate.replace(/\"false\"/g, "false");
+ 
+
+  var outputWindowHeader;
+  try {
+
+    var deviceTemplateParsed = JSON.parse(deviceTemplate);
+    deviceTemplate = JSON.stringify(deviceTemplateParsed,null,4); 
+    outputWindowHeader = "JSON created successfully"
+
+  } catch (err) {
+    console.log(err.name); // ReferenceError
+    console.log(err.message); // lalala is not defined
+    console.log(err.stack); // ReferenceError: lalala is not defined at (...стек вызовов)
+
+    // Можем также просто вывести ошибку целиком
+    // Ошибка приводится к строке вида "name: message"
+    console.log(err);
+    outputWindowHeader = "Exported with ERRORS!!! Check JSON data!!!"
+
+  
+  }
+
+
+//   deviceTemplate = JSON.stringify(JSON.parse(deviceTemplate),null,4); 
+
+ 
+
+  //console.log(deviceTemplate);
+  //displayText_(deviceTemplate);
+  displayText_(deviceTemplate, outputWindowHeader);
 
 
 }
@@ -167,8 +223,25 @@ function exportSheet(e) {
 
   var rowsData = getRowsData_(sheet, getExportOptions(e));
   var json = makeJSON_(rowsData, getExportOptions(e));
-  displayText_(json);
+
+
+
+  displayText_(json, "Exported without Errors");
 }
+
+function correctParId (sheetParameters) {
+  var parIdRange = sheetParameters.getRange(sheetParameters.getFrozenRows()+1, 1, sheetParameters.getMaxRows(), sheetParameters.getMaxColumns());
+
+  console.log(sheetParameters.getFrozenRows()+1);
+  console.log(sheetParameters.getMaxRows());
+  console.log(parIdRange[0]);
+
+  console.log(getColumnsData_(sheetParameters, parIdRange, 1));
+ 
+
+}
+
+
   
 function getExportOptions(e) {
   var options = {};
@@ -186,14 +259,25 @@ function getExportOptions(e) {
   return options;
 }
 
+// function replacer(key, value) {
+//   if (typeof value == "\[") {
+//     return value.toString()
+//   }
+//   return value
+// }
+
+
+
+
+
 function makeJSON_(object, options) {
   if (options.format == FORMAT_PRETTY) {
     var jsonString = JSON.stringify(object, null, 4);
   } else if (options.format == FORMAT_MULTILINE) {
     var jsonString = Utilities.jsonStringify(object);
     jsonString = jsonString.replace(/},/gi, '},\n');
-    jsonString = prettyJSON.replace(/":\[{"/gi, '":\n[{"');
-    jsonString = prettyJSON.replace(/}\],/gi, '}],\n');
+    jsonString = jsonString.replace(/":\[{"/gi, '":\n[{"');
+    jsonString = jsonString.replace(/}\],/gi, '}],\n');
   } else {
     var jsonString = Utilities.jsonStringify(object);
   }
@@ -206,12 +290,12 @@ function makeJSON_(object, options) {
 }
 
 //View result in JSON
-function displayText_(text) {
+function displayText_(text, windowHeader) {
   var output = HtmlService.createHtmlOutput("<textarea style='width:100%;' rows='20'>" + text + "</textarea>");
-  output.setWidth(400)
+  output.setWidth(600)
   output.setHeight(500);
   SpreadsheetApp.getUi()
-      .showModalDialog(output, 'Exported JSON');
+      .showModalDialog(output, windowHeader);
 }
 
 // getRowsData iterates row by row in the input range and returns an array of objects.
@@ -235,9 +319,10 @@ function getRowsData_(sheet, options) {
 
   // console.log("headers =");
   // console.log(headers);
+ 
 
+ 
  var dataRange = sheet.getRange(sheet.getFrozenRows()+1, 1, sheet.getMaxRows(), sheet.getMaxColumns());
-
 
 
   var objects = getObjects_(dataRange.getValues(), normalizeHeaders_(headers));
@@ -284,6 +369,10 @@ function getObjects_(data, keys) {
     var hasData = false;
     for (var j = 0; j < data[i].length; ++j) {
       var cellData = data[i][j];
+      
+
+      cellData = normalizeDataCell_(cellData, keys[j]);
+
       if (isCellEmpty_(cellData)) {
         continue;
       }
@@ -303,7 +392,7 @@ function getObjects_(data, keys) {
 function normalizeHeaders_(headers) {
   var keys = [];
   for (var i = 0; i < headers.length; ++i) {
-    var key = normalizeHeader_(headers[i]);
+    var key = normalizeHeaderCell_(headers[i]);
     if (key.length > 0) {
       keys.push(key);
     }
@@ -320,7 +409,7 @@ function normalizeHeaders_(headers) {
 //   "First Name" -> "firstName"
 //   "Market Cap (millions) -> "marketCapMillions
 //   "1 number at the beginning is ignored" -> "numberAtTheBeginningIsIgnored"
-function normalizeHeader_(header) {
+function normalizeHeaderCell_(header) {
   var key = "";   //key - key field of JSON
   var upperCase = false;
   for (var i = 0; i < header.length; ++i) {
@@ -347,6 +436,48 @@ function normalizeHeader_(header) {
   return key;
 }
 
+function normalizeDataCell_(cellRawData, key) {
+  
+  // var cellData = "";   //cellData - data field of JSON
+  //убираем лишние пробелы из содержимого ячейки (перед данными, дублирующие, в конце строки)
+  
+
+  if (typeof(cellRawData) != "number") {
+    cellData = cellRawData.toString().trim();
+  } else {
+    cellData = cellRawData;
+  }
+  
+  
+  
+  // var upperCase = false;
+  // for (var i = 0; i < cellRawData.length; ++i) {
+  //   var letter = cellRawData[i];
+  //   var previousLetter = cellRawData[i - 1];
+  //   if ((( (previousLetter == " ") && (cellData.length > 0)) || (i == 0)) && (key == "name")) {
+  //     upperCase = true;
+  //   //  continue;
+  //   }
+
+  //   // //Allowed symbols are letters, numbers, _
+  //   // if ( (!isAlnum_(letter)) && (letter != "_") ) {
+  //   //   continue;
+  //   // }
+
+  //   // if (key.length == 0 && isDigit_(letter)) {
+  //   //   continue; // first character must be a letter
+  //   // }
+
+  //   if (upperCase) {
+  //     upperCase = false;
+  //     cellData += letter.toUpperCase();
+  //   } else {
+  //     cellData += letter.toLowerCase();
+  //   }
+  // }
+  return cellData;
+}
+
 // Returns true if the cell where cellData was read from is empty.
 // Arguments:
 //   - cellData: string
@@ -354,7 +485,7 @@ function isCellEmpty_(cellData) {
   return typeof(cellData) == "string" && cellData == "";
 }
 
-// Returns true if the character char is alphabetical, false otherwise.
+// Returns true if the character char is alphabetical or number, false otherwise.
 function isAlnum_(char) {
   return char >= 'A' && char <= 'Z' ||
     char >= 'a' && char <= 'z' ||
