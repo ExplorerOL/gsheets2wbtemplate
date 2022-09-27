@@ -50,16 +50,14 @@ function createWbTemplate(e) {
     // console.log(templateObj);
     // console.log(typeof(templateObj));
 
-    // sheet = ss.getSheetByName("device");
-    // convertOptions.structure = STRUCTURE_HASH;
-    // var templateObj = getRowsData_(ss.getSheetByName("device"), convertOptions)[0];
-
     var sheets = ss.getSheets(); //Sheet[] — An array of all the sheets in the spreadsheet.
     var sheetsData = {};
 
     for (var i = 1; i < sheets.length; i++) {
         var sheet = sheets[i];
         var sheetName = sheet.getName();
+        // if (sheetName == "device") convertOptions.structure = STRUCTURE_HASH
+        // else convertOptions.structure = STRUCTURE_LIST;
 
         convertOptions.structure = STRUCTURE_LIST;
 
@@ -70,21 +68,22 @@ function createWbTemplate(e) {
 
         if (
             sheetName != "main" &&
+            sheetName != "device" &&
             sheetName != "en" &&
-            sheetName != "ru" &&
-            sheetName != "device"
+            sheetName != "ru"
         ) {
             sheetsData[sheetName] = rowsData;
         }
-
-        // if ((sheetName != "main") && (sheetName != "en") && (sheetName != "ru")) {
-        //     sheetsData = rowsData;
-        // }
+        if (sheetName == "device") {
+            sheetsData.name = rowsData[0].name;
+            sheetsData.id = rowsData[0].id;
+            sheetsData.response_timeout = rowsData[0].response_timeout_ms;
+            sheetsData.guard_interval = rowsData[0].guard_interval_us;
+            //rowsData[0].keys.forEach (function(element) {sheetsData.element = rowsData[0].element  });
+        }
     }
 
-    templateObj.device = {};
     templateObj.device = sheetsData;
-
     //console.log('templateObj = ' + templateObj);
 
     //Adding translations
@@ -160,13 +159,6 @@ function getExportOptions(e) {
 function makeJSON_(object, options) {
     if (options.format == FORMAT_PRETTY) {
         var jsonString = JSON.stringify(object, null, 4);
-
-        //for ENUM: removing "[ -> [
-        jsonString = jsonString.replaceAll('"[', "[");
-        jsonString = jsonString.replaceAll(']"', "]");
-        jsonString = jsonString.replaceAll('\\"', '"');
-        jsonString = jsonString.replaceAll('"true"', "true");
-        jsonString = jsonString.replaceAll('"false"', "false");
     } else if (options.format == FORMAT_MULTILINE) {
         var jsonString = Utilities.jsonStringify(object);
         jsonString = jsonString.replace(/},/gi, "},\n");
