@@ -75,11 +75,16 @@ function createWbTemplate(e) {
             sheetsData[sheetName] = rowsData;
         }
         if (sheetName == "device") {
-            sheetsData.name = rowsData[0].name;
-            sheetsData.id = rowsData[0].id;
-            sheetsData.response_timeout = rowsData[0].response_timeout_ms;
-            sheetsData.guard_interval = rowsData[0].guard_interval_us;
-            //rowsData[0].keys.forEach (function(element) {sheetsData.element = rowsData[0].element  });
+            // sheetsData.name = rowsData[0].name;
+            // sheetsData.id = rowsData[0].id;
+            // sheetsData.response_timeout = rowsData[0].response_timeout_ms;
+            // sheetsData.guard_interval = rowsData[0].guard_interval_us;
+
+            var rowsDataKeys = Object.keys(rowsData[0]);
+            rowsDataKeys.forEach(function (element) {
+                sheetsData[element] = rowsData[0][element];
+            });
+            var a = 1;
         }
     }
 
