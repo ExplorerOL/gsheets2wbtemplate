@@ -25,7 +25,6 @@ function onOpen() {
     ss.addMenu("WB tools", menuEntries);
 }
 
-
 //Result output window
 function makeTextBox(app, name) {
     var textArea = app
@@ -39,70 +38,92 @@ function makeTextBox(app, name) {
 
 //----------------------------new variant of template generation
 function createWbTemplate(e) {
-  console.log("exportTest");
+    console.log("exportTest");
 
-  var convertOptions = getExportOptions(e);
+    var convertOptions = getExportOptions(e);
 
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
 
-  var sheet = ss.getSheetByName("main");
-  convertOptions.structure = STRUCTURE_LIST;
-  var templateObj = getRowsData_(ss.getSheetByName("main"), convertOptions)[0];
-  // console.log(templateObj);
-  // console.log(typeof(templateObj));
+    var sheet = ss.getSheetByName("main");
+    convertOptions.structure = STRUCTURE_LIST;
+    var templateObj = getRowsData_(ss.getSheetByName("main"), convertOptions)[0];
+    // console.log(templateObj);
+    // console.log(typeof(templateObj));
 
+    // sheet = ss.getSheetByName("device");
+    // convertOptions.structure = STRUCTURE_HASH;
+    // var templateObj = getRowsData_(ss.getSheetByName("device"), convertOptions)[0];
 
-  var sheets = ss.getSheets(); //Sheet[] — An array of all the sheets in the spreadsheet.
-  var sheetsData = {};
+    var sheets = ss.getSheets(); //Sheet[] — An array of all the sheets in the spreadsheet.
+    var sheetsData = {};
 
-  for (var i = 1; i < sheets.length; i++) { 
-      var sheet = sheets[i];
-      var sheetName = sheet.getName();
-      convertOptions.structure = STRUCTURE_LIST;
+    for (var i = 1; i < sheets.length; i++) {
+        var sheet = sheets[i];
+        var sheetName = sheet.getName();
 
-      var rowsData = getRowsData_(sheet, convertOptions);
+        convertOptions.structure = STRUCTURE_LIST;
 
-      //если нет заполненных строк кроме заголовка, то секцию не добаляем в шаблон
-      if (Object.keys(rowsData).length == 0) continue;
+        var rowsData = getRowsData_(sheet, convertOptions);
 
-      if ((sheetName != "main") && (sheetName != "device") && (sheetName != "en") && (sheetName != "ru")) { 
-        sheetsData[sheetName] = rowsData;
-      }
-  }
+        //если нет заполненных строк кроме заголовка, то секцию не добаляем в шаблон
+        if (Object.keys(rowsData).length == 0) continue;
 
-  templateObj.device = sheetsData;
-  //console.log('templateObj = ' + templateObj);
+        if (
+            sheetName != "main" &&
+            sheetName != "en" &&
+            sheetName != "ru" &&
+            sheetName != "device"
+        ) {
+            sheetsData[sheetName] = rowsData;
+        }
 
-  //Adding translations
-  convertOptions.structure = STRUCTURE_LIST;
-  templateObj.translations = {};
-  sheet = ss.getSheetByName("en");
-  templateObj.translations.en = getColumnsData_(sheet, sheet.getRange(sheet.getFrozenRows() + 1, 2, sheet.getMaxRows(), sheet.getMaxColumns()), 1)[0];
-  sheet = ss.getSheetByName("ru");
-  templateObj.translations.ru = getColumnsData_(sheet, sheet.getRange(sheet.getFrozenRows() + 1, 2, sheet.getMaxRows(), sheet.getMaxColumns()), 1)[0];
+        // if ((sheetName != "main") && (sheetName != "en") && (sheetName != "ru")) {
+        //     sheetsData = rowsData;
+        // }
+    }
 
-  //Creating JSON wb template from JS object
-  var templateJSON = makeJSON_(templateObj, getExportOptions(e));
+    templateObj.device = {};
+    templateObj.device = sheetsData;
 
+    //console.log('templateObj = ' + templateObj);
 
-  var outputWindowHeader = "Result";
-  //Trying to convert from JSON to JS object to check correctness of templete
-  try {
-      var templateJSONParsed = JSON.parse(templateJSON);
-      templateJSON = JSON.stringify(templateJSONParsed, null, 4);
-      outputWindowHeader = "JSON created successfully";
-  } catch (err) {
-      console.log(err.name); // ReferenceError
-      console.log(err.message); // lalala is not defined
-      console.log(err.stack); // ReferenceError: lalala is not defined at (...стек вызовов)
+    //Adding translations
+    convertOptions.structure = STRUCTURE_LIST;
+    templateObj.translations = {};
+    sheet = ss.getSheetByName("en");
+    templateObj.translations.en = getColumnsData_(
+        sheet,
+        sheet.getRange(sheet.getFrozenRows() + 1, 2, sheet.getMaxRows(), sheet.getMaxColumns()),
+        1
+    )[0];
+    sheet = ss.getSheetByName("ru");
+    templateObj.translations.ru = getColumnsData_(
+        sheet,
+        sheet.getRange(sheet.getFrozenRows() + 1, 2, sheet.getMaxRows(), sheet.getMaxColumns()),
+        1
+    )[0];
 
-      // Можем также просто вывести ошибку целиком
-      // Ошибка приводится к строке вида "name: message"
-      console.log(err);
-      outputWindowHeader = "Exported with ERRORS!!! Check JSON data!!!";
-  }
+    //Creating JSON wb template from JS object
+    var templateJSON = makeJSON_(templateObj, getExportOptions(e));
 
-  displayText_(templateJSON, outputWindowHeader);
+    var outputWindowHeader = "Result";
+    //Trying to convert from JSON to JS object to check correctness of templete
+    try {
+        var templateJSONParsed = JSON.parse(templateJSON);
+        templateJSON = JSON.stringify(templateJSONParsed, null, 4);
+        outputWindowHeader = "JSON created successfully";
+    } catch (err) {
+        console.log(err.name); // ReferenceError
+        console.log(err.message); // lalala is not defined
+        console.log(err.stack); // ReferenceError: lalala is not defined at (...стек вызовов)
+
+        // Можем также просто вывести ошибку целиком
+        // Ошибка приводится к строке вида "name: message"
+        console.log(err);
+        outputWindowHeader = "Exported with ERRORS!!! Check JSON data!!!";
+    }
+
+    displayText_(templateJSON, outputWindowHeader);
 }
 
 function correctParId(sheetParameters) {
@@ -136,10 +157,16 @@ function getExportOptions(e) {
     return options;
 }
 
-
 function makeJSON_(object, options) {
     if (options.format == FORMAT_PRETTY) {
         var jsonString = JSON.stringify(object, null, 4);
+
+        //for ENUM: removing "[ -> [
+        jsonString = jsonString.replaceAll('"[', "[");
+        jsonString = jsonString.replaceAll(']"', "]");
+        jsonString = jsonString.replaceAll('\\"', '"');
+        jsonString = jsonString.replaceAll('"true"', "true");
+        jsonString = jsonString.replaceAll('"false"', "false");
     } else if (options.format == FORMAT_MULTILINE) {
         var jsonString = Utilities.jsonStringify(object);
         jsonString = jsonString.replace(/},/gi, "},\n");
