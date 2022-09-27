@@ -75,16 +75,12 @@ function createWbTemplate(e) {
             sheetsData[sheetName] = rowsData;
         }
         if (sheetName == "device") {
-            // sheetsData.name = rowsData[0].name;
-            // sheetsData.id = rowsData[0].id;
-            // sheetsData.response_timeout = rowsData[0].response_timeout_ms;
-            // sheetsData.guard_interval = rowsData[0].guard_interval_us;
-
+            //getting names of keys
             var rowsDataKeys = Object.keys(rowsData[0]);
+            //creating elements in "device" field of WB template
             rowsDataKeys.forEach(function (element) {
                 sheetsData[element] = rowsData[0][element];
             });
-            var a = 1;
         }
     }
 
@@ -164,6 +160,15 @@ function getExportOptions(e) {
 function makeJSON_(object, options) {
     if (options.format == FORMAT_PRETTY) {
         var jsonString = JSON.stringify(object, null, 4);
+
+        //for ENUM: removing "[ -> [
+        jsonString = jsonString.replaceAll('"[', "[");
+        jsonString = jsonString.replaceAll(']"', "]");
+        jsonString = jsonString.replaceAll('\\"', '"');
+
+        //for Boolean variables
+        jsonString = jsonString.replaceAll('"true"', "true");
+        jsonString = jsonString.replaceAll('"false"', "false");
     } else if (options.format == FORMAT_MULTILINE) {
         var jsonString = Utilities.jsonStringify(object);
         jsonString = jsonString.replace(/},/gi, "},\n");
